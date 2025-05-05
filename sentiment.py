@@ -1,10 +1,11 @@
 from textblob import TextBlob
 import pandas as pd
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import re
+import os
 
-print("this is gonna be an epic program")
 def display_menu():
-    print("=== Sentiment Analyzer ===")
+    print("\n=== Sentiment Analyzer ===")
     print("1. Upload/Select file")
     print("2. Analyze file (choose mode)")
     print("3. Statistics")
@@ -58,9 +59,22 @@ def classify_sentiment(score):
         return "Neutral"
 
 def save_analysis_results(filename, reviews, scores, classifications):
-    try:
-        output_filename = f"{filename.split(".")[0]}_sentiment.csv"
+    # ensure results dir exists
+    results_dir = "results"
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
 
+    # extract the base filename (w/out folder path)
+    base_filename = os.path.basename(filename)
+    output_filename = f"{os.path.splitext(base_filename)[0]}_sentiment.csv"
+    output_path = os.path.join(results_dir, output_filename)
+
+    #optional? not sure if happens
+    if not reviews:
+        print("No reviews to save. The file is empty or could not be loaded.")
+        return
+
+    try:
         data = {
             "Review": reviews,
             "Sentiment Score": scores,
@@ -68,12 +82,18 @@ def save_analysis_results(filename, reviews, scores, classifications):
         }
         df = pd.DataFrame(data)
 
-        df.to_csv(output_filename, index=False, encoding="utf-8")
-        print(f"Sentiment Analysis results saved to '{output_filename}'")
+        df.to_csv(output_path, index=False, encoding="utf-8")
+        print(f"Sentiment Analysis results saved to '{output_path}'")
     
     except Exception as e:
         print(f"Error while saving: {e}")
 
+def valid_filename(filename):
+    pattern = r"^[\w\-. ]+\.(txt|csv)$"
+    forbidden = r"[\/:*?\"<>\|]"
+    if re.search(forbidden, filename):
+        return False
+    return re.match(pattern, filename) is not None
 
 def main():
     filename = None
@@ -87,15 +107,35 @@ def main():
             break
 
         elif choice == "1":
-            print("\n==OPLOAD/SELECT FILE MODE(UNDER CONSTRUCTION)==")
-            filename = input("Enter the filename (e.g. example.txt): ")
-            print(f"\nFile '{filename}' selected.")
-            ... # REGEX here? to validate filename input?
+            print("\n==OPLOAD/SELECT FILE MODE==")
+            #list of data files in /data folder
+            data_files = [f for f in os.listdir("data") if os.path.isfile(os.path.join("data", f))]
+            if data_files:
+                print("Files available in /data folder:")
+                for f in data_files:
+                    print(f" - {f}")
+            else:
+                print("No files in /data. Please upload your file there first.")
+
+            while True:
+                filename = input("Enter the filename (e.g. example.txt) or press 0 to exit: ")
+                full_path = os.path.join("data", filename)
+                if filename == "0":
+                    break
+                if not valid_filename(filename):
+                    print("Invalid filename. Please try again")
+                elif not os.path.exists(full_path):
+                    print("File does not exist in 'data' folder. Please upload your file there and try again")
+                else:
+                    print(f"\nFile '{filename}' selected.")
+                    filename = full_path
+                    break
 
         elif choice == "2":
             if not filename:
-                print("Please select a file you want to analyze first (Option 1 in menu)")
-                return
+                print("\nPlease select a file you want to analyze first (Option 1 in menu)")
+                continue
+
             print("\n===Analyze Mode===")
             print("\nChoose Sentiment Analysis Method:\n1. VADER\n2. TextBlob")
         

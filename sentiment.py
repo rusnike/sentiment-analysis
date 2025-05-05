@@ -1,6 +1,7 @@
 from textblob import TextBlob
 import pandas as pd
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from google.cloud import language_v1
 import re
 import os
 
@@ -50,6 +51,17 @@ def analyze_sentiment_vader(review):
     results = analyzer.polarity_scores(review)
     return results["compound"]
 
+def analyze_sentiment_google(review):
+    if not review.strip():
+        return 0.0
+    
+    client = language_v1.LanguageServiceClient()
+    document = language_v1.Document(content=review, type=language_v1.Document.Type.PLAIN_TEXT)
+
+    sentiment = client.analyze_sentiment(request={"document": document}).document_sentiment
+    return sentiment.score
+
+
 def classify_sentiment(score):
     if score >= 0.05:
         return "Positive"
@@ -83,7 +95,7 @@ def save_analysis_results(filename, reviews, scores, classifications):
         df = pd.DataFrame(data)
 
         df.to_csv(output_path, index=False, encoding="utf-8")
-        print(f"Sentiment Analysis results saved to '{output_path}'")
+        print(f"\nSentiment Analysis results saved to '{output_path}'")
     
     except Exception as e:
         print(f"Error while saving: {e}")
@@ -97,6 +109,9 @@ def valid_filename(filename):
 
 def main():
     filename = None
+    data_dir = "data"
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
 
     while True:
         display_menu()
@@ -137,10 +152,10 @@ def main():
                 continue
 
             print("\n===Analyze Mode===")
-            print("\nChoose Sentiment Analysis Method:\n1. VADER\n2. TextBlob")
+            print("\nChoose Sentiment Analysis Method:\n1. VADER\n2. TextBlob\n3. Google Cloud")
         
             try:
-                choice = int(input("Enter your choice (1 or 2): "))
+                choice = int(input("Enter your choice (1, 2 or 3): "))
                 if choice in [1, 2]:
                     reviews = load_reviews(filename)
                     scores = []

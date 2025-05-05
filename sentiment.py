@@ -166,6 +166,12 @@ def main():
         elif choice == "3":
             print("\n===Sentiment Statistics===")
             ...
+            # print out:
+        #TOTAL REVIEWS: X
+        #POSITIVE: X
+        #NEUTRAL: X
+        #NEGATIVE: X
+        #SENTIMENT SCORE: X
 
         else:
             print("\nInvalid choice. Please type a number from the menu")

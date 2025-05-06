@@ -15,23 +15,13 @@ def display_menu():
 
 def load_reviews(filename):
     try:
-        if filename.endswith(".csv"):
-            df = pd.read_csv(filename)
-            return df["Comment"].tolist()
-        
-        elif filename.endswith(".txt"):
+        if filename.endswith((".csv", ".txt")):
             with open(filename, 'r', encoding="utf-8") as file:
-                reviews = []
-                for line in file:
-                    cleaned_line = line.strip()
-                    if cleaned_line:  # only add if line not empty
-                        reviews.append(cleaned_line)
+                reviews = [line.strip() for line in file if line.strip()]
             return reviews
-
         else:
             print("Unsupported format. Please use .txt or .csv file formats")
             return []
-
     except Exception as e:
         print("Error loading file:", e)
         return []
@@ -70,7 +60,7 @@ def classify_sentiment(score):
     else:
         return "Neutral"
 
-def save_analysis_results(filename, reviews, scores, classifications):
+def save_analysis_results(filename, reviews, scores, classifications, analysis_method):
     # ensure results dir exists
     results_dir = "results"
     if not os.path.exists(results_dir):
@@ -78,7 +68,7 @@ def save_analysis_results(filename, reviews, scores, classifications):
 
     # extract the base filename (w/out folder path)
     base_filename = os.path.basename(filename)
-    output_filename = f"{os.path.splitext(base_filename)[0]}_sentiment.csv"
+    output_filename = f"{os.path.splitext(base_filename)[0]}_sentiment_{analysis_method}.csv"
     output_path = os.path.join(results_dir, output_filename)
 
     #optional? not sure if happens
@@ -94,6 +84,7 @@ def save_analysis_results(filename, reviews, scores, classifications):
         }
         df = pd.DataFrame(data)
 
+        print(f"[DEBUG] Saving analysis results to: {output_path}")
         df.to_csv(output_path, index=False, encoding="utf-8")
         print(f"\nSentiment Analysis results saved to '{output_path}'")
     
@@ -122,29 +113,33 @@ def main():
             break
 
         elif choice == "1":
-            print("\n==OPLOAD/SELECT FILE MODE==")
-            #list of data files in /data folder
+            print("\n==UPLOAD/SELECT FILE MODE==")
             data_files = [f for f in os.listdir("data") if os.path.isfile(os.path.join("data", f))]
             if data_files:
                 print("Files available in /data folder:")
-                for f in data_files:
-                    print(f" - {f}")
+                for i, f in enumerate(data_files, 1):
+                    print(f"{i}. {f}")
             else:
                 print("No files in /data. Please upload your file there first.")
+                continue
 
             while True:
-                filename = input("Enter the filename (e.g. example.txt) or press 0 to exit: ")
-                full_path = os.path.join("data", filename)
-                if filename == "0":
-                    break
-                if not valid_filename(filename):
-                    print("Invalid filename. Please try again")
-                elif not os.path.exists(full_path):
-                    print("File does not exist in 'data' folder. Please upload your file there and try again")
-                else:
-                    print(f"\nFile '{filename}' selected.")
-                    filename = full_path
-                    break
+                try:
+                    file_choice = input("Enter the number of the file you want to select (or 0 to exit): ")
+                    if file_choice == "0":
+                        break
+                    
+                    file_index = int(file_choice) - 1
+                    if 0 <= file_index < len(data_files):
+                        selected_file = data_files[file_index]
+                        full_path = os.path.join("data", selected_file)
+                        print(f"\nFile '{selected_file}' selected.")
+                        filename = full_path
+                        break
+                    else:
+                        print("Invalid file number. Please try again.")
+                except ValueError:
+                    print("Please enter a valid number.")
 
         elif choice == "2":
             if not filename:
@@ -157,9 +152,11 @@ def main():
             try:
                 choice = int(input("Enter your choice (1, 2 or 3): "))
                 if choice in [1, 2]:
+                    print(f"\n[DEBUG] Analyzing file: {filename} using {'VADER' if choice == 1 else 'TextBlob'}")
                     reviews = load_reviews(filename)
                     scores = []
                     classifications = []
+                    analysis_method = "vader" if choice == 1 else "textblob"
 
                     for review in reviews:
                         if choice == 1:
@@ -172,7 +169,7 @@ def main():
                         classifications.append(sentiment)
                         # print(f"Score: {score:.3f} -> {sentiment}")
 
-                    save_analysis_results(filename, reviews, scores, classifications)
+                    save_analysis_results(filename, reviews, scores, classifications, analysis_method)
                 else:
                     print("\nInvalid number. Please type 1 or 2")
             except ValueError:
@@ -180,13 +177,60 @@ def main():
 
         elif choice == "3":
             print("\n===Sentiment Statistics===")
-            ...
-            # print out:
-        #TOTAL REVIEWS: X
-        #POSITIVE: X
-        #NEUTRAL: X
-        #NEGATIVE: X
-        #SENTIMENT SCORE: X
+            # Look for analysis files
+            results_dir = "results"
+            if not os.path.exists(results_dir):
+                print("\nNo analysis results found. Please analyze a file first (Option 2 in menu)")
+                continue
+                
+            # Get all analysis files
+            analysis_files = [f for f in os.listdir(results_dir) if f.endswith('_sentiment_vader.csv') or f.endswith('_sentiment_textblob.csv')]
+            if not analysis_files:
+                print("\nNo analysis results found. Please analyze a file first (Option 2 in menu)")
+                continue
+            
+            # Display available analysis files
+            print("\nAvailable analysis results:")
+            for i, f in enumerate(analysis_files, 1):
+                print(f"{i}. {f}")
+            
+            # Let user choose which file to view statistics for
+            while True:
+                try:
+                    file_choice = input("\nEnter the number of the analysis result to view (or 0 to exit): ")
+                    if file_choice == "0":
+                        break
+                    
+                    file_index = int(file_choice) - 1
+                    if 0 <= file_index < len(analysis_files):
+                        selected_file = analysis_files[file_index]
+                        file_path = os.path.join(results_dir, selected_file)
+                        print(f"\n[DEBUG] Reading statistics from: {file_path}")
+                        df = pd.read_csv(file_path)
+                        
+                        # Count classifications
+                        total_reviews = len(df)
+                        positive_count = len(df[df['Sentiment Classification'] == 'Positive'])
+                        negative_count = len(df[df['Sentiment Classification'] == 'Negative'])
+                        neutral_count = len(df[df['Sentiment Classification'] == 'Neutral'])
+                        sentiment_score = df['Sentiment Score'].mean()
+
+                        sentiment_score_classification = classify_sentiment(sentiment_score)
+                        
+                        positive_percentage = (positive_count / total_reviews) * 100    
+                        negative_percentage = (negative_count / total_reviews) * 100
+                        neutral_percentage = (neutral_count / total_reviews) * 100
+
+                        print(f"\nTotal Reviews: {total_reviews}")
+                        print(f"\nPOSITIVE Reviews: {positive_count} ({positive_percentage:.2f}%)")
+                        print(f"NEGATIVE Reviews: {negative_count} ({negative_percentage:.2f}%)")
+                        print(f"NEUTRAL Reviews: {neutral_count} ({neutral_percentage:.2f}%)")
+                        print(f"\nSENTIMENT SCORE: {sentiment_score:.2f} ({sentiment_score_classification})")
+                        break
+                    else:
+                        print("Invalid file number. Please try again.")
+                except ValueError:
+                    print("Please enter a valid number.")
 
         else:
             print("\nInvalid choice. Please type a number from the menu")

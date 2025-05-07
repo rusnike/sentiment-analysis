@@ -4,6 +4,7 @@
 textblob
 vaderSentiment
 pandas
+pytest
 
-# Optional:
-google-cloud-language
+# Future development (not required for current functionality)
+google-cloud-language # for upcoming google cloud integration

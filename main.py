@@ -47,9 +47,9 @@ def handle_analysis(filename):
 
     print("\n=== Analyze Mode ===")
     print("Selected file: ", filename)
-    print("\nChoose Sentiment Analysis Method:\n1. VADER\n2. TextBlob\n3. Google Cloud")
+    print("\nChoose Sentiment Analysis Method:\n1. VADER (better for social media, informal language, emojis)\n2. TextBlob (better for formal text, reviews, articles, documents)")
     try:
-        choice = int(input("Enter your choice (1, 2 or 3): "))
+        choice = int(input("Enter your choice (1 or 2): "))
         if choice not in [1, 2]:
             print("\nInvalid number. Please type 1 or 2")
             return

@@ -1,7 +1,9 @@
-#THIS IS A DOCUMENT FOR LISTING THE REQUIRED PYHTON PACKAGES 
-#THAT NEED TO BE INSTALLED FOR THIS PROGRAM
+# This is a document for listing the required Python packages for Sentiment Analysis program
+# Install using: pip install -r requirements.txt
 
 textblob
 vaderSentiment
 pandas
+
+# Optional:
 google-cloud-language
